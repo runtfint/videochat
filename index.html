@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>приват комната</title>
+</head>
+
+<body>
+  <div>
+    <span>
+      <h3>Ты</h3>
+      <video id="webcamVideo" autoplay playsinline muted></video>
+    </span>
+    <span>
+      <h3>Собеседник</h3>
+      <video id="remoteVideo" autoplay playsinline></video>
+    </span>
+  </div>
+
+  <div>
+    <button id="webcamButton">Включить камеру</button>
+  </div>
+
+  <div>
+    <button id="callButton">Создать звонок</button>
+  </div>
+
+
+  <div>
+    <input type="text" id="callInput" placeholder="Кол присоединения">
+  </div>
+
+  <div>
+    <button id="answerButton">Присоединиться</button>
+  </div>
+
+  <!-- <div>
+    <button id="hangupButton" disabled>Выйти</button>
+  </div> -->
+
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
