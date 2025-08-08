@@ -95,6 +95,7 @@ callButton.onclick = async () => {
 
   const offerDescription = await pc.createOffer()
   await pc.setLocalDescription(offerDescription)
+  logConnectionState('have-local-offer');
 
   const offer = {
     sdp: offerDescription.sdp,
@@ -128,6 +129,8 @@ callButton.onclick = async () => {
         if (!pc.currentRemoteDescription && payload.new.answer) {
           try {
             const answerDescription = new RTCSessionDescription(payload.new.answer);
+            console.log('ПОХОДУ ТУТ 2 РАЗА');
+
             pc.setRemoteDescription(answerDescription);
           } catch (error) {
             console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
@@ -172,9 +175,11 @@ answerButton.onclick = async () => {
 
   try {
     await pc.setRemoteDescription(new RTCSessionDescription(dataCall.offer));
+    logConnectionState('have-remote-offer');
 
     const answerDescription = await pc.createAnswer();
     await pc.setLocalDescription(answerDescription);
+    logConnectionState('stable');
 
     const answer = {
       type: answerDescription.type,
@@ -217,3 +222,9 @@ answerButton.onclick = async () => {
     console.error('4 Ошибка при отправке ответа:', error);
   }
 };
+
+function logConnectionState(num) {
+  console.log('NUM:', num || '', 'SignalingState:', pc.signalingState,
+    'IceGatheringState:', pc.iceGatheringState,
+    'ConnectionState:', pc.connectionState);
+}
