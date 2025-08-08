@@ -124,30 +124,43 @@ callButton.onclick = async () => {
         table: 'calls',
         filter: `id=eq.${CALL_ID}`
       },
-      (payload) => {
+      async (payload) => {
         if (!pc.currentRemoteDescription && payload.new.answer) {
           try {
             const answerDescription = new RTCSessionDescription(payload.new.answer);
             console.log('ПОХОДУ ТУТ 2 РАЗА');
 
-            pc.setRemoteDescription(answerDescription);
+            await pc.setRemoteDescription(answerDescription);
+
+            if (payload.new.answerCandidate) {
+              console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
+              try {
+                if (pc.remoteDescription) {
+                  const candidate = new RTCIceCandidate(payload.new.answerCandidate);
+                  await pc.addIceCandidate(candidate);
+                }
+              } catch (error) {
+                console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
+              }
+            }
+
           } catch (error) {
             console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
           }
         }
 
-        if (payload.new.answerCandidate) {
-          console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
-          try {
-            if (pc.remoteDescription) {
-              const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-              pc.addIceCandidate(candidate);
-            }
-          } catch (error) {
-            console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
+        // if (pc.currentRemoteDescription && payload.new.answerCandidate) {
+        //   console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
+        //   try {
+        //     if (pc.remoteDescription) {
+        //       const candidate = new RTCIceCandidate(payload.new.answerCandidate);
+        //       await pc.addIceCandidate(candidate);
+        //     }
+        //   } catch (error) {
+        //     console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
+        //   }
+        // }
 
-          }
-        }
       }
     )
     .subscribe()
