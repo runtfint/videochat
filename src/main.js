@@ -49,7 +49,6 @@ const makeOfferCandidate = async (callId, candidate) => {
     .from('calls')
     .update({ offerCandidate: candidate })
     .eq('id', callId)
-    .select();
 
   if (errorOffer) {
     console.error('Error creating offer:', errorOffer);
@@ -61,7 +60,6 @@ const makeAnswerCandidate = async (callId, candidate) => {
     .from('calls')
     .update({ answerCandidate: candidate })
     .eq('id', callId)
-    .select();
 
   if (errorAnswer) {
     console.error('Error creating answer:', errorAnswer);
@@ -71,71 +69,62 @@ const makeAnswerCandidate = async (callId, candidate) => {
 callButton.onclick = async () => {
   let CALL_ID = null;
 
+  const { data: dataCreateCall } = await supabase
+    .from('calls')
+    .insert({})
+    .select()
+    .single();
+
+  if (dataCreateCall) {
+    callInput.value = dataCreateCall.id
+    CALL_ID = dataCreateCall.id
+  }
+
+  pc.onicecandidate = event => {
+    event.candidate && makeOfferCandidate(CALL_ID, event.candidate.toJSON())
+  }
+
   const offerDescription = await pc.createOffer()
   await pc.setLocalDescription(offerDescription)
 
-  const offer = {
-    type: offerDescription.type,
-    sdp: offerDescription.sdp
-  }
-
-  const { data: dataSet, error: errorSet } = await supabase
+  await supabase
     .from('calls')
-    .insert({ offer })
-    .select();
-
-  if (errorSet) {
-    console.error('Error update offer:', errorSet)
-  } else {
-    callInput.value = dataSet.id
-    CALL_ID = dataSet.id
-
-    pc.onicecandidate = event => {
-      console.log('IN CALL: ', event);
-
-      event.candidate && makeOfferCandidate(CALL_ID, event.candidate.toJSON())
-    }
-  }
+    .update({
+      offer: {
+        type: offerDescription.type,
+        sdp: offerDescription.sdp
+      }
+    })
+    .eq('id', CALL_ID)
 
 
-  // const subscription = supabase
-  //   .channel('calls_changes')
-  //   .on(
-  //     'postgres_changes',
-  //     {
-  //       event: 'UPDATE',
-  //       schema: 'public',
-  //       table: 'calls',
-  //       filter: `id=eq.${CALL_ID}`
-  //     },
-  //     async (payload) => {
-  //       console.log(payload);
+  const subscription = supabase
+    .channel('calls_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'calls',
+        filter: `id=eq.${CALL_ID}`
+      },
+      async (payload) => {
+        console.log(payload);
 
-  //       if (!pc.remoteDescription && payload.new.answer) {
-  //         try {
-  //           const answerDescription = new RTCSessionDescription(payload.new.answer);
+        if (!pc.currentRemoteDescription && !payload.old.answer && !!payload.new.answer) {
+          console.log('ahuet');
+          const answerDescription = new RTCSessionDescription(payload.new.answer);
+          await pc.setRemoteDescription(answerDescription);
+        }
 
-  //           await pc.setRemoteDescription(answerDescription);
-
-  //           if (payload.new.answerCandidate) {
-  //             try {
-  //               if (pc.remoteDescription) {
-  //                 const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-  //                 await pc.addIceCandidate(candidate);
-  //               }
-  //             } catch (error) {
-  //               console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
-  //             }
-  //           }
-
-  //         } catch (error) {
-  //           console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
-  //         }
-  //       }
-
-  //     }
-  //   )
-  //   .subscribe()
+        if (!!payload.new.answerCandidate && !!payload.new.answer) {
+          console.log('blya');
+          const candidate = new RTCIceCandidate(payload.new.answerCandidate);
+          await pc.addIceCandidate(candidate);
+        }
+      }
+    )
+    .subscribe()
 }
 
 
@@ -143,13 +132,11 @@ answerButton.onclick = async () => {
   const callId = callInput.value;
   if (!callId) return
 
-  const { data: dataCall, error: errorCall } = await supabase
+  const { data: dataCall } = await supabase
     .from('calls')
     .select()
     .eq('id', callId)
     .single()
-
-  if (errorCall) { console.error('Error get call:', errorCall) }
 
   pc.onicecandidate = (event) => {
     console.log('IN ANSWER: ', event);
@@ -162,40 +149,16 @@ answerButton.onclick = async () => {
     const answerDescription = await pc.createAnswer();
     await pc.setLocalDescription(answerDescription);
 
-    const answer = {
-      type: answerDescription.type,
-      sdp: answerDescription.sdp,
-    };
-
-    const { error: errorSet } = await supabase
+    await supabase
       .from('calls')
-      .update({ answer })
+      .update({
+        answer: {
+          type: answerDescription.type,
+          sdp: answerDescription.sdp,
+        }
+      })
       .eq('id', callId)
-      .select();
 
-    if (errorSet) { console.error('Error update answer:', errorSet) }
-
-    // const subscription = supabase
-    //   .channel('calls_changes')
-    //   .on(
-    //     'postgres_changes',
-    //     {
-    //       event: 'UPDATE',
-    //       schema: 'public',
-    //       table: 'calls',
-    //       filter: `id=eq.${callId}`
-    //     },
-    //     (payload) => {
-    //       if (payload.new.offerCandidate) {
-    //         try {
-    //           pc.addIceCandidate(new RTCIceCandidate(payload.new.offerCandidate));
-    //         } catch (error) {
-    //           console.error('3 Нет кандидата собеседника:', error);
-    //         }
-    //       }
-    //     }
-    //   )
-    //   .subscribe()
   } catch (error) {
     console.error('4 Ошибка при отправке ответа:', error);
   }
