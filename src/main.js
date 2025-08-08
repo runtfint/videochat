@@ -90,8 +90,6 @@ callButton.onclick = async () => {
   }
 
   pc.onicecandidate = event => {
-    console.log('ПИЗДА ТУТ', event.candidate);
-
     event.candidate && makeOfferCandidate(CALL_ID, event.candidate.toJSON())
   }
 
@@ -127,14 +125,14 @@ callButton.onclick = async () => {
       },
       (payload) => {
         // console.log('Изменение получено!', payload.new)
-        console.log('ЖОПА ТУТ', payload);
-
         if (!pc.currentRemoteDescription && payload.new.answer) {
           const answerDescription = new RTCSessionDescription(payload.new.answer);
           pc.setRemoteDescription(answerDescription);
         }
 
         if (payload.new.answerCandidate) {
+          console.log('answer: ', payload.new.answerCandidate);
+
           const candidate = new RTCIceCandidate(payload.new.answerCandidate);
           pc.addIceCandidate(candidate);
         }
@@ -206,6 +204,8 @@ answerButton.onclick = async () => {
         // console.log('Изменение получено!', payload.new)
 
         if (payload.new.offerCandidate) {
+          console.log('OFFER: ', payload.new.offerCandidate);
+
           const candidate = new RTCIceCandidate(payload.new.offerCandidate);
           pc.addIceCandidate(candidate);
         }
