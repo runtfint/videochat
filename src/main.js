@@ -104,47 +104,46 @@ callButton.onclick = async () => {
 
   if (errorSet) { console.error('Error update offer:', errorSet) }
 
-  // const subscription = supabase
-  //   .channel('calls_changes')
-  //   .on(
-  //     'postgres_changes',
-  //     {
-  //       event: 'UPDATE',
-  //       schema: 'public',
-  //       table: 'calls',
-  //       filter: `id=eq.${CALL_ID}`
-  //     },
-  //     async (payload) => {
-  //       if (!pc.remoteDescription && payload.new.answer) {
-  //         try {
-  //           const answerDescription = new RTCSessionDescription(payload.new.answer);
-  //           console.log('ПОХОДУ ТУТ 2 РАЗА');
+  const subscription = supabase
+    .channel('calls_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'calls',
+        filter: `id=eq.${CALL_ID}`
+      },
+      async (payload) => {
+        console.log(payload);
 
-  //           await pc.setRemoteDescription(answerDescription);
+        // if (!pc.remoteDescription && payload.new.answer) {
+        //   try {
+        //     const answerDescription = new RTCSessionDescription(payload.new.answer);
+        //     console.log('ПОХОДУ ТУТ 2 РАЗА');
 
-  //           if (payload.new.answerCandidate) {
-  //             console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
-  //             try {
-  //               if (pc.remoteDescription) {
-  //                 const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-  //                 await pc.addIceCandidate(candidate);
-  //               }
-  //             } catch (error) {
-  //               console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
-  //             }
-  //           }
+        //     await pc.setRemoteDescription(answerDescription);
 
-  //         } catch (error) {
-  //           console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
-  //         }
-  //       }
+        //     if (payload.new.answerCandidate) {
+        //       console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
+        //       try {
+        //         if (pc.remoteDescription) {
+        //           const candidate = new RTCIceCandidate(payload.new.answerCandidate);
+        //           await pc.addIceCandidate(candidate);
+        //         }
+        //       } catch (error) {
+        //         console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
+        //       }
+        //     }
 
-  //     }
-  //   )
-  //   .subscribe()
+        //   } catch (error) {
+        //     console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
+        //   }
+        // }
 
-  // hangupButton.disabled = false;
-  // answerButton.disabled = true;
+      }
+    )
+    .subscribe()
 }
 
 
