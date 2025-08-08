@@ -11,11 +11,29 @@ const servers = {
   // ],
   iceServers: [
     {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credentials: 'openrelayproject'
-    }
-  ]
+      urls: "stun:stun.relay.metered.ca:80",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:80",
+      username: "669d490295ab4706726a71a0",
+      credential: "5XPEZs2mb3eUrKqn",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:80?transport=tcp",
+      username: "669d490295ab4706726a71a0",
+      credential: "5XPEZs2mb3eUrKqn",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:443",
+      username: "669d490295ab4706726a71a0",
+      credential: "5XPEZs2mb3eUrKqn",
+    },
+    {
+      urls: "turns:global.relay.metered.ca:443?transport=tcp",
+      username: "669d490295ab4706726a71a0",
+      credential: "5XPEZs2mb3eUrKqn",
+    },
+  ],
 }
 
 let pc = new RTCPeerConnection(servers);
