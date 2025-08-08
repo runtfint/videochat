@@ -6,9 +6,16 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 const servers = {
+  // iceServers: [
+  //   { urls: ['stun:stun1.l.google.com:19032', 'stun:stun2.l.google.com:19032'] }
+  // ],
   iceServers: [
-    { urls: ['stun:stun1.l.google.com:19032', 'stun:stun2.l.google.com:19032'] }
-  ],
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credentials: 'openrelayproject'
+    }
+  ]
 }
 
 let pc = new RTCPeerConnection(servers);
