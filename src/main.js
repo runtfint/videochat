@@ -126,15 +126,24 @@ callButton.onclick = async () => {
       (payload) => {
         // console.log('Изменение получено!', payload.new)
         if (!pc.currentRemoteDescription && payload.new.answer) {
-          const answerDescription = new RTCSessionDescription(payload.new.answer);
-          pc.setRemoteDescription(answerDescription);
+          try {
+            const answerDescription = new RTCSessionDescription(payload.new.answer);
+            pc.setRemoteDescription(answerDescription);
+          } catch (error) {
+            console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
+          }
         }
 
         if (payload.new.answerCandidate) {
-          console.log('answer: ', payload.new.answerCandidate);
+          try {
+            if (pc.remoteDescription) {
+              const candidate = new RTCIceCandidate(payload.new.answerCandidate);
+              pc.addIceCandidate(candidate);
+            }
+          } catch (error) {
+            console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
 
-          const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-          pc.addIceCandidate(candidate);
+          }
         }
       }
     )
@@ -155,61 +164,56 @@ answerButton.onclick = async () => {
     .eq('id', callId)
     .single()
 
-  if (errorCall) {
-    console.error('Error get call:', errorCall);
-  } else {
-    // console.log('Finded call:', dataCall);
-  }
+  if (errorCall) { console.error('Error get call:', errorCall) }
 
   pc.onicecandidate = (event) => {
     event.candidate && makeAnswerCandidate(callId, event.candidate.toJSON());
   };
 
-  const offerDescription = dataCall.offer;
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(dataCall.offer));
 
-  await pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
+    const answerDescription = await pc.createAnswer();
+    await pc.setLocalDescription(answerDescription);
 
-  const answerDescription = await pc.createAnswer();
-  await pc.setLocalDescription(answerDescription);
+    const answer = {
+      type: answerDescription.type,
+      sdp: answerDescription.sdp,
+    };
 
-  const answer = {
-    type: answerDescription.type,
-    sdp: answerDescription.sdp,
-  };
+    const { error: errorSet } = await supabase
+      .from('calls')
+      .update({ answer })
+      .eq('id', callId)
+      .select();
 
-  const { data: dataSet, error: errorSet } = await supabase
-    .from('calls')
-    .update({ answer })
-    .eq('id', callId)
-    .select();
+    if (errorSet) { console.error('Error update answer:', errorSet) }
 
-  if (errorSet) {
-    console.error('Error update answer:', errorSet);
-  } else {
-    // console.log('Answer updated:', dataSet);
-  }
-
-
-  const subscription = supabase
-    .channel('calls_changes')
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'calls',
-        filter: `id=eq.${callId}`
-      },
-      (payload) => {
-        // console.log('Изменение получено!', payload.new)
-
-        if (payload.new.offerCandidate) {
-          console.log('OFFER: ', payload.new.offerCandidate);
-
-          const candidate = new RTCIceCandidate(payload.new.offerCandidate);
-          pc.addIceCandidate(candidate);
+    const subscription = supabase
+      .channel('calls_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'calls',
+          filter: `id=eq.${callId}`
+        },
+        (payload) => {
+          if (payload.new.offerCandidate) {
+            try {
+              if (pc.remoteDescription) {
+                const candidate = new RTCIceCandidate(payload.new.offerCandidate);
+                pc.addIceCandidate(candidate);
+              }
+            } catch (error) {
+              console.error('3 Нет описания собеседника:', error);
+            }
+          }
         }
-      }
-    )
-    .subscribe()
+      )
+      .subscribe()
+  } catch (error) {
+    console.error('4 Ошибка при отправке ответа:', error);
+  }
 };
