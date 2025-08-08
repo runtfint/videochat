@@ -33,6 +33,8 @@ webcamButton.onclick = async () => {
   })
 
   pc.ontrack = event => {
+    console.log('ON TRACK', event);
+
     event.streams[0].getTracks().forEach(track => {
       remoteStream.addTrack(track)
       remoteVideo.srcObject = remoteStream;
@@ -63,6 +65,10 @@ const makeAnswerCandidate = async (callId, candidate) => {
   if (errorAnswer) {
     console.error('Error creating answer:', errorAnswer);
   }
+}
+
+pc.onsignalingstatechange = () => {
+  console.log(pc.signalingState);
 }
 
 callButton.onclick = async () => {
@@ -97,28 +103,8 @@ callButton.onclick = async () => {
     .eq('id', CALL_ID)
 
 
-  // const answerSubscription = supabase
-  //   .channel('call_answer_changes')
-  //   .on(
-  //     'postgres_changes',
-  //     {
-  //       event: 'UPDATE',
-  //       schema: 'public',
-  //       table: 'calls',
-  //       filter: `id=eq.${CALL_ID}`,
-  //     },
-  //     (payload) => {
-  //       const newAnswer = payload.new.answer;
-  //       if (newAnswer && !pc.currentRemoteDescription) {
-  //         const answerDescription = new RTCSessionDescription(newAnswer);
-  //         pc.setRemoteDescription(answerDescription).catch(console.error);
-  //       }
-  //     }
-  //   )
-  //   .subscribe();
-
-  const answerCandidateSubscription = supabase
-    .channel('call_answer_candidate_changes')
+  const answerSubscription = supabase
+    .channel('call_answer_changes')
     .on(
       'postgres_changes',
       {
@@ -128,6 +114,13 @@ callButton.onclick = async () => {
         filter: `id=eq.${CALL_ID}`,
       },
       (payload) => {
+        const newAnswer = payload.new.answer;
+        if (newAnswer && !pc.currentRemoteDescription) {
+          const answerDescription = new RTCSessionDescription(newAnswer);
+
+          pc.setRemoteDescription(answerDescription).catch(console.error);
+        }
+
         const newCandidate = payload.new.answerCandidate;
         const oldCandidate = payload.old?.answerCandidate;
 
@@ -138,34 +131,6 @@ callButton.onclick = async () => {
       }
     )
     .subscribe();
-
-
-  // const subscription = supabase
-  //   .channel('calls_changes')
-  //   .on(
-  //     'postgres_changes',
-  //     {
-  //       event: 'UPDATE',
-  //       schema: 'public',
-  //       table: 'calls',
-  //       filter: `id=eq.${CALL_ID}`
-  //     },
-  //     async (payload) => {
-  //       console.log(payload);
-
-  //       if (!pc.currentRemoteDescription && !payload.old.answer && !!payload.new.answer) {
-  //         const answerDescription = new RTCSessionDescription(payload.new.answer);
-  //         await pc.setRemoteDescription(answerDescription);
-  //       }
-
-  //       if (!!payload.new.answerCandidate && !!payload.new.answer) {
-  //         console.log('blya');
-  //         const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-  //         await pc.addIceCandidate(candidate);
-  //       }
-  //     }
-  //   )
-  //   .subscribe()
 }
 
 
