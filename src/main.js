@@ -125,7 +125,6 @@ callButton.onclick = async () => {
         filter: `id=eq.${CALL_ID}`
       },
       (payload) => {
-        // console.log('Изменение получено!', payload.new)
         if (!pc.currentRemoteDescription && payload.new.answer) {
           try {
             const answerDescription = new RTCSessionDescription(payload.new.answer);
@@ -138,6 +137,7 @@ callButton.onclick = async () => {
         }
 
         if (payload.new.answerCandidate) {
+          console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
           try {
             if (pc.remoteDescription) {
               const candidate = new RTCIceCandidate(payload.new.answerCandidate);
