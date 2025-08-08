@@ -97,25 +97,25 @@ callButton.onclick = async () => {
     .eq('id', CALL_ID)
 
 
-  const answerSubscription = supabase
-    .channel('call_answer_changes')
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'calls',
-        filter: `id=eq.${CALL_ID}`,
-      },
-      (payload) => {
-        const newAnswer = payload.new.answer;
-        if (newAnswer && !pc.currentRemoteDescription) {
-          const answerDescription = new RTCSessionDescription(newAnswer);
-          pc.setRemoteDescription(answerDescription).catch(console.error);
-        }
-      }
-    )
-    .subscribe();
+  // const answerSubscription = supabase
+  //   .channel('call_answer_changes')
+  //   .on(
+  //     'postgres_changes',
+  //     {
+  //       event: 'UPDATE',
+  //       schema: 'public',
+  //       table: 'calls',
+  //       filter: `id=eq.${CALL_ID}`,
+  //     },
+  //     (payload) => {
+  //       const newAnswer = payload.new.answer;
+  //       if (newAnswer && !pc.currentRemoteDescription) {
+  //         const answerDescription = new RTCSessionDescription(newAnswer);
+  //         pc.setRemoteDescription(answerDescription).catch(console.error);
+  //       }
+  //     }
+  //   )
+  //   .subscribe();
 
   const answerCandidateSubscription = supabase
     .channel('call_answer_candidate_changes')
