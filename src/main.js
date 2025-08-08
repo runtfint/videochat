@@ -71,20 +71,9 @@ const makeAnswerCandidate = async (callId, candidate) => {
 callButton.onclick = async () => {
   let CALL_ID = null;
 
-  const { data: dataGet, error: errorGet } = await supabase
-    .from('calls')
-    .insert({})
-    .select()
-    .single();
-
-  if (errorGet) {
-    console.error('Error creating call:', errorGet);
-  } else {
-    callInput.value = dataGet.id
-    CALL_ID = dataGet.id
-  }
-
   pc.onicecandidate = event => {
+    console.log('IN CALL: ', event);
+
     event.candidate && makeOfferCandidate(CALL_ID, event.candidate.toJSON())
   }
 
@@ -92,58 +81,60 @@ callButton.onclick = async () => {
   await pc.setLocalDescription(offerDescription)
 
   const offer = {
-    sdp: offerDescription.sdp,
-    type: offerDescription.type
+    type: offerDescription.type,
+    sdp: offerDescription.sdp
   }
 
   const { data: dataSet, error: errorSet } = await supabase
     .from('calls')
-    .update({ offer })
-    .eq('id', dataGet.id)
+    .insert({ offer })
     .select();
 
-  if (errorSet) { console.error('Error update offer:', errorSet) }
+  if (errorSet) {
+    console.error('Error update offer:', errorSet)
+  } else {
+    callInput.value = dataSet.id
+    CALL_ID = dataSet.id
+  }
 
-  const subscription = supabase
-    .channel('calls_changes')
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'calls',
-        filter: `id=eq.${CALL_ID}`
-      },
-      async (payload) => {
-        console.log(payload);
+  // const subscription = supabase
+  //   .channel('calls_changes')
+  //   .on(
+  //     'postgres_changes',
+  //     {
+  //       event: 'UPDATE',
+  //       schema: 'public',
+  //       table: 'calls',
+  //       filter: `id=eq.${CALL_ID}`
+  //     },
+  //     async (payload) => {
+  //       console.log(payload);
 
-        // if (!pc.remoteDescription && payload.new.answer) {
-        //   try {
-        //     const answerDescription = new RTCSessionDescription(payload.new.answer);
-        //     console.log('ПОХОДУ ТУТ 2 РАЗА');
+  //       if (!pc.remoteDescription && payload.new.answer) {
+  //         try {
+  //           const answerDescription = new RTCSessionDescription(payload.new.answer);
 
-        //     await pc.setRemoteDescription(answerDescription);
+  //           await pc.setRemoteDescription(answerDescription);
 
-        //     if (payload.new.answerCandidate) {
-        //       console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
-        //       try {
-        //         if (pc.remoteDescription) {
-        //           const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-        //           await pc.addIceCandidate(candidate);
-        //         }
-        //       } catch (error) {
-        //         console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
-        //       }
-        //     }
+  //           if (payload.new.answerCandidate) {
+  //             try {
+  //               if (pc.remoteDescription) {
+  //                 const candidate = new RTCIceCandidate(payload.new.answerCandidate);
+  //                 await pc.addIceCandidate(candidate);
+  //               }
+  //             } catch (error) {
+  //               console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
+  //             }
+  //           }
 
-        //   } catch (error) {
-        //     console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
-        //   }
-        // }
+  //         } catch (error) {
+  //           console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
+  //         }
+  //       }
 
-      }
-    )
-    .subscribe()
+  //     }
+  //   )
+  //   .subscribe()
 }
 
 
@@ -160,6 +151,7 @@ answerButton.onclick = async () => {
   if (errorCall) { console.error('Error get call:', errorCall) }
 
   pc.onicecandidate = (event) => {
+    console.log('IN ANSWER: ', event);
     event.candidate && makeAnswerCandidate(callId, event.candidate.toJSON());
   };
 
@@ -168,8 +160,6 @@ answerButton.onclick = async () => {
 
     const answerDescription = await pc.createAnswer();
     await pc.setLocalDescription(answerDescription);
-
-    await pc.addIceCandidate(new RTCIceCandidate(dataCall.offerCandidate));
 
     const answer = {
       type: answerDescription.type,
@@ -209,9 +199,3 @@ answerButton.onclick = async () => {
     console.error('4 Ошибка при отправке ответа:', error);
   }
 };
-
-function logConnectionState(num) {
-  console.log('NUM:', num || '', 'SignalingState:', pc.signalingState,
-    'IceGatheringState:', pc.iceGatheringState,
-    'ConnectionState:', pc.connectionState);
-}
