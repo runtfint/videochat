@@ -125,6 +125,8 @@ callButton.onclick = async () => {
         filter: `id=eq.${CALL_ID}`
       },
       async (payload) => {
+        console.log('currentRemoteDescription!!!', pc.currentRemoteDescription, pc.remoteDescription);
+
         if (!pc.currentRemoteDescription && payload.new.answer) {
           try {
             const answerDescription = new RTCSessionDescription(payload.new.answer);
