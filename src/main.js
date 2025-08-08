@@ -9,7 +9,6 @@ const servers = {
   iceServers: [
     { urls: ['stun:stun1.l.google.com:19032', 'stun:stun2.l.google.com:19032'] }
   ],
-  iceCandidatePoolSize: 10,
 }
 
 let pc = new RTCPeerConnection(servers);
@@ -98,47 +97,75 @@ callButton.onclick = async () => {
     .eq('id', CALL_ID)
 
 
-  const s1 = supabase
-    .channel('calls_changes')
+  const answerSubscription = supabase
+    .channel('call_answer_changes')
     .on(
       'postgres_changes',
       {
         event: 'UPDATE',
         schema: 'public',
         table: 'calls',
-        filter: `id=eq.${CALL_ID}`
+        filter: `id=eq.${CALL_ID}`,
       },
-      async (payload) => {
-        console.log(payload);
-
-        if (!pc.currentRemoteDescription && !payload.old.answer && !!payload.new.answer) {
-          console.log('ahuet', payload.new.answer);
-          const answerDescription = new RTCSessionDescription(payload.new.answer);
-          await pc.setRemoteDescription(answerDescription);
+      (payload) => {
+        const newAnswer = payload.new.answer;
+        if (newAnswer && !pc.currentRemoteDescription) {
+          const answerDescription = new RTCSessionDescription(newAnswer);
+          pc.setRemoteDescription(answerDescription).catch(console.error);
         }
       }
     )
-    .subscribe()
+    .subscribe();
 
-  const s2 = supabase
-    .channel('calls_changes')
+  const answerCandidateSubscription = supabase
+    .channel('call_answer_candidate_changes')
     .on(
       'postgres_changes',
       {
         event: 'UPDATE',
         schema: 'public',
         table: 'calls',
-        filter: `id=eq.${CALL_ID}`
+        filter: `id=eq.${CALL_ID}`,
       },
-      async (payload) => {
-        if (!!payload.new.answerCandidate) {
-          console.log('blya');
-          const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-          await pc.addIceCandidate(candidate);
+      (payload) => {
+        const newCandidate = payload.new.answerCandidate;
+        const oldCandidate = payload.old?.answerCandidate;
+
+        if (newCandidate && newCandidate !== oldCandidate) {
+          const iceCandidate = new RTCIceCandidate(newCandidate);
+          pc.addIceCandidate(iceCandidate).catch(console.error);
         }
       }
     )
-    .subscribe()
+    .subscribe();
+
+
+  // const subscription = supabase
+  //   .channel('calls_changes')
+  //   .on(
+  //     'postgres_changes',
+  //     {
+  //       event: 'UPDATE',
+  //       schema: 'public',
+  //       table: 'calls',
+  //       filter: `id=eq.${CALL_ID}`
+  //     },
+  //     async (payload) => {
+  //       console.log(payload);
+
+  //       if (!pc.currentRemoteDescription && !payload.old.answer && !!payload.new.answer) {
+  //         const answerDescription = new RTCSessionDescription(payload.new.answer);
+  //         await pc.setRemoteDescription(answerDescription);
+  //       }
+
+  //       if (!!payload.new.answerCandidate && !!payload.new.answer) {
+  //         console.log('blya');
+  //         const candidate = new RTCIceCandidate(payload.new.answerCandidate);
+  //         await pc.addIceCandidate(candidate);
+  //       }
+  //     }
+  //   )
+  //   .subscribe()
 }
 
 
@@ -172,6 +199,28 @@ answerButton.onclick = async () => {
         }
       })
       .eq('id', callId)
+
+    const offerCandidateSubscription = supabase
+      .channel('call_offer_candidate_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'calls',
+          filter: `id=eq.${callId}`,
+        },
+        (payload) => {
+          const newCandidate = payload.new.offerCandidate;
+          const oldCandidate = payload.old?.offerCandidate;
+
+          if (newCandidate && newCandidate !== oldCandidate) {
+            const iceCandidate = new RTCIceCandidate(newCandidate);
+            pc.addIceCandidate(iceCandidate).catch(console.error);
+          }
+        }
+      )
+      .subscribe();
 
   } catch (error) {
     console.error('4 Ошибка при отправке ответа:', error);
