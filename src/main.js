@@ -68,7 +68,19 @@ const makeAnswerCandidate = async (callId, candidate) => {
 }
 
 pc.onsignalingstatechange = () => {
-  console.log(pc.signalingState);
+  console.log('signalingState', pc.signalingState);
+}
+
+pc.onconnectionstatechange = () => {
+  console.log('connectionState', pc.connectionState);
+}
+
+pc.oniceconnectionstatechange = () => {
+  console.log('iceConnectionState', pc.iceConnectionState);
+}
+
+pc.onicegatheringstatechange = () => {
+  console.log('iceGatheringState', pc.iceGatheringState);
 }
 
 callButton.onclick = async () => {
@@ -117,7 +129,6 @@ callButton.onclick = async () => {
         const newAnswer = payload.new.answer;
         if (newAnswer && !pc.currentRemoteDescription) {
           const answerDescription = new RTCSessionDescription(newAnswer);
-
           pc.setRemoteDescription(answerDescription).catch(console.error);
         }
 
