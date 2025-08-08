@@ -71,12 +71,6 @@ const makeAnswerCandidate = async (callId, candidate) => {
 callButton.onclick = async () => {
   let CALL_ID = null;
 
-  pc.onicecandidate = event => {
-    console.log('IN CALL: ', event);
-
-    event.candidate && makeOfferCandidate(CALL_ID, event.candidate.toJSON())
-  }
-
   const offerDescription = await pc.createOffer()
   await pc.setLocalDescription(offerDescription)
 
@@ -95,7 +89,14 @@ callButton.onclick = async () => {
   } else {
     callInput.value = dataSet.id
     CALL_ID = dataSet.id
+
+    pc.onicecandidate = event => {
+      console.log('IN CALL: ', event);
+
+      event.candidate && makeOfferCandidate(CALL_ID, event.candidate.toJSON())
+    }
   }
+
 
   // const subscription = supabase
   //   .channel('calls_changes')
