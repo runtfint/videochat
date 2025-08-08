@@ -98,7 +98,7 @@ callButton.onclick = async () => {
     .eq('id', CALL_ID)
 
 
-  const subscription = supabase
+  supabase
     .channel('calls_changes')
     .on(
       'postgres_changes',
@@ -112,12 +112,26 @@ callButton.onclick = async () => {
         console.log(payload);
 
         if (!pc.currentRemoteDescription && !payload.old.answer && !!payload.new.answer) {
-          console.log('ahuet');
+          console.log('ahuet', payload.new.answer);
           const answerDescription = new RTCSessionDescription(payload.new.answer);
           await pc.setRemoteDescription(answerDescription);
         }
+      }
+    )
+    .subscribe()
 
-        if (!!payload.new.answerCandidate && !!payload.new.answer) {
+  supabase
+    .channel('calls_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'calls',
+        filter: `id=eq.${CALL_ID}`
+      },
+      async (payload) => {
+        if (!!payload.new.answerCandidate) {
           console.log('blya');
           const candidate = new RTCIceCandidate(payload.new.answerCandidate);
           await pc.addIceCandidate(candidate);
