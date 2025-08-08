@@ -45,7 +45,7 @@ webcamButton.onclick = async () => {
 }
 
 const makeOfferCandidate = async (callId, candidate) => {
-  const { data: dataOffer, error: errorOffer } = await supabase
+  const { error: errorOffer } = await supabase
     .from('calls')
     .update({ offerCandidate: candidate })
     .eq('id', callId)
@@ -53,13 +53,11 @@ const makeOfferCandidate = async (callId, candidate) => {
 
   if (errorOffer) {
     console.error('Error creating offer:', errorOffer);
-  } else {
-    // console.log('Offer Created:', dataOffer);
   }
 }
 
 const makeAnswerCandidate = async (callId, candidate) => {
-  const { data: dataAnswer, error: errorAnswer } = await supabase
+  const { error: errorAnswer } = await supabase
     .from('calls')
     .update({ answerCandidate: candidate })
     .eq('id', callId)
@@ -67,8 +65,6 @@ const makeAnswerCandidate = async (callId, candidate) => {
 
   if (errorAnswer) {
     console.error('Error creating answer:', errorAnswer);
-  } else {
-    // console.log('Answer Created:', dataOffer);
   }
 }
 
@@ -84,7 +80,6 @@ callButton.onclick = async () => {
   if (errorGet) {
     console.error('Error creating call:', errorGet);
   } else {
-    // console.log('New call created:', dataGet);
     callInput.value = dataGet.id
     CALL_ID = dataGet.id
   }
@@ -95,7 +90,6 @@ callButton.onclick = async () => {
 
   const offerDescription = await pc.createOffer()
   await pc.setLocalDescription(offerDescription)
-  logConnectionState('have-local-offer');
 
   const offer = {
     sdp: offerDescription.sdp,
@@ -108,64 +102,46 @@ callButton.onclick = async () => {
     .eq('id', dataGet.id)
     .select();
 
-  if (errorSet) {
-    console.error('Error update offer:', errorSet);
-  } else {
-    // console.log('Offer updated:', dataSet);
-  }
+  if (errorSet) { console.error('Error update offer:', errorSet) }
 
-  const subscription = supabase
-    .channel('calls_changes')
-    .on(
-      'postgres_changes',
-      {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'calls',
-        filter: `id=eq.${CALL_ID}`
-      },
-      async (payload) => {
-        console.log('currentRemoteDescription!!!', pc.currentRemoteDescription, pc.remoteDescription);
+  // const subscription = supabase
+  //   .channel('calls_changes')
+  //   .on(
+  //     'postgres_changes',
+  //     {
+  //       event: 'UPDATE',
+  //       schema: 'public',
+  //       table: 'calls',
+  //       filter: `id=eq.${CALL_ID}`
+  //     },
+  //     async (payload) => {
+  //       if (!pc.remoteDescription && payload.new.answer) {
+  //         try {
+  //           const answerDescription = new RTCSessionDescription(payload.new.answer);
+  //           console.log('ПОХОДУ ТУТ 2 РАЗА');
 
-        if (!pc.currentRemoteDescription && payload.new.answer) {
-          try {
-            const answerDescription = new RTCSessionDescription(payload.new.answer);
-            console.log('ПОХОДУ ТУТ 2 РАЗА');
+  //           await pc.setRemoteDescription(answerDescription);
 
-            await pc.setRemoteDescription(answerDescription);
+  //           if (payload.new.answerCandidate) {
+  //             console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
+  //             try {
+  //               if (pc.remoteDescription) {
+  //                 const candidate = new RTCIceCandidate(payload.new.answerCandidate);
+  //                 await pc.addIceCandidate(candidate);
+  //               }
+  //             } catch (error) {
+  //               console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
+  //             }
+  //           }
 
-            if (payload.new.answerCandidate) {
-              console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
-              try {
-                if (pc.remoteDescription) {
-                  const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-                  await pc.addIceCandidate(candidate);
-                }
-              } catch (error) {
-                console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
-              }
-            }
+  //         } catch (error) {
+  //           console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
+  //         }
+  //       }
 
-          } catch (error) {
-            console.error('1 НЕТ ОПИСАНИЯ УДАЛЕННОГО СОБЕСЕДНИКА', error);
-          }
-        }
-
-        // if (pc.currentRemoteDescription && payload.new.answerCandidate) {
-        //   console.log('pc.remoteDescription', pc.remoteDescription, payload.new.answerCandidate);
-        //   try {
-        //     if (pc.remoteDescription) {
-        //       const candidate = new RTCIceCandidate(payload.new.answerCandidate);
-        //       await pc.addIceCandidate(candidate);
-        //     }
-        //   } catch (error) {
-        //     console.error('2 НЕ УДАЛОСЬ УСТАНОВИТЬ СОБЕСЕДНИКА', error);
-        //   }
-        // }
-
-      }
-    )
-    .subscribe()
+  //     }
+  //   )
+  //   .subscribe()
 
   // hangupButton.disabled = false;
   // answerButton.disabled = true;
@@ -190,11 +166,11 @@ answerButton.onclick = async () => {
 
   try {
     await pc.setRemoteDescription(new RTCSessionDescription(dataCall.offer));
-    logConnectionState('have-remote-offer');
 
     const answerDescription = await pc.createAnswer();
     await pc.setLocalDescription(answerDescription);
-    logConnectionState('stable');
+
+    await pc.addIceCandidate(new RTCIceCandidate(dataCall.offerCandidate));
 
     const answer = {
       type: answerDescription.type,
@@ -209,30 +185,27 @@ answerButton.onclick = async () => {
 
     if (errorSet) { console.error('Error update answer:', errorSet) }
 
-    const subscription = supabase
-      .channel('calls_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'calls',
-          filter: `id=eq.${callId}`
-        },
-        (payload) => {
-          if (payload.new.offerCandidate) {
-            try {
-              if (pc.remoteDescription) {
-                const candidate = new RTCIceCandidate(payload.new.offerCandidate);
-                pc.addIceCandidate(candidate);
-              }
-            } catch (error) {
-              console.error('3 Нет описания собеседника:', error);
-            }
-          }
-        }
-      )
-      .subscribe()
+    // const subscription = supabase
+    //   .channel('calls_changes')
+    //   .on(
+    //     'postgres_changes',
+    //     {
+    //       event: 'UPDATE',
+    //       schema: 'public',
+    //       table: 'calls',
+    //       filter: `id=eq.${callId}`
+    //     },
+    //     (payload) => {
+    //       if (payload.new.offerCandidate) {
+    //         try {
+    //           pc.addIceCandidate(new RTCIceCandidate(payload.new.offerCandidate));
+    //         } catch (error) {
+    //           console.error('3 Нет кандидата собеседника:', error);
+    //         }
+    //       }
+    //     }
+    //   )
+    //   .subscribe()
   } catch (error) {
     console.error('4 Ошибка при отправке ответа:', error);
   }
