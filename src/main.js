@@ -90,6 +90,8 @@ callButton.onclick = async () => {
   }
 
   pc.onicecandidate = event => {
+    console.log('ПИЗДА ТУТ', event.candidate);
+
     event.candidate && makeOfferCandidate(CALL_ID, event.candidate.toJSON())
   }
 
@@ -125,6 +127,7 @@ callButton.onclick = async () => {
       },
       (payload) => {
         // console.log('Изменение получено!', payload.new)
+        console.log('ЖОПА ТУТ', payload);
 
         if (!pc.currentRemoteDescription && payload.new.answer) {
           const answerDescription = new RTCSessionDescription(payload.new.answer);
