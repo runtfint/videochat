@@ -98,7 +98,7 @@ callButton.onclick = async () => {
     .eq('id', CALL_ID)
 
 
-  supabase
+  const s1 = supabase
     .channel('calls_changes')
     .on(
       'postgres_changes',
@@ -120,7 +120,7 @@ callButton.onclick = async () => {
     )
     .subscribe()
 
-  supabase
+  const s2 = supabase
     .channel('calls_changes')
     .on(
       'postgres_changes',
